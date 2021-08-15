@@ -1,0 +1,24 @@
+# permissions for end users to edit webuis.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: webui-editor-role
+rules:
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - webuis
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - webuis/status
+  verbs:
+  - get

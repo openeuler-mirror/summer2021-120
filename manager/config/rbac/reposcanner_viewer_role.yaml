@@ -1,0 +1,20 @@
+# permissions for end users to view reposcanners.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: reposcanner-viewer-role
+rules:
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - reposcanners
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - reposcanners/status
+  verbs:
+  - get

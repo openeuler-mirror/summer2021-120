@@ -1,0 +1,60 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - reposcanners
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - reposcanners/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - reposcanners/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - webuis
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - webuis/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - website.openeuler.org
+  resources:
+  - webuis/status
+  verbs:
+  - get
+  - patch
+  - update

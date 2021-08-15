@@ -1,0 +1,25 @@
+domain: openeuler.org
+layout:
+- go.kubebuilder.io/v3
+projectName: manager
+repo: openeuler.org/website-manager
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openeuler.org
+  group: website
+  kind: RepoScanner
+  path: openeuler.org/website-manager/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openeuler.org
+  group: website
+  kind: WebUI
+  path: openeuler.org/website-manager/api/v1alpha1
+  version: v1alpha1
+version: "3"

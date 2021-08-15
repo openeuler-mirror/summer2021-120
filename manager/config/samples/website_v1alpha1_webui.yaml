@@ -1,0 +1,7 @@
+apiVersion: website.openeuler.org/v1alpha1
+kind: WebUI
+metadata:
+  name: webui-sample
+spec:
+  # Add fields here
+  foo: bar
