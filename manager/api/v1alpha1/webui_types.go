@@ -29,7 +29,9 @@ type WebUISpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of WebUI. Edit webui_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Foo         string             `json:"foo,omitempty"`
+	PodSpec     corev1.PodSpec     `json:"podSpec"`
+	ServiceSpec corev1.ServiceSpec `json:"serviceSpec"`
 }
 
 // WebUIStatus defines the observed state of WebUI
