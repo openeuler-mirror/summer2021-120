@@ -32,6 +32,7 @@ type WebUISpec struct {
 	Foo         string             `json:"foo,omitempty"`
 	PodSpec     corev1.PodSpec     `json:"podSpec"`
 	ServiceSpec corev1.ServiceSpec `json:"serviceSpec"`
+	IngressSpec corev1.IngressSpec `json:"ingressSpec"`
 }
 
 // WebUIStatus defines the observed state of WebUI

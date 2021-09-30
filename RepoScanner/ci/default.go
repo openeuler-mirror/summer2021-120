@@ -14,12 +14,21 @@ type CI interface {
 
 
 func BuildCI() *CI {
-	if(os.Getenv("BASE_COMMIT") == "custom"){
-		return CustomCI{
-			Image: os.Getenv("CustomCI_IMAGE")
+	if(os.Getenv("CI_TYPE") == "custom"){
+		return &CustomCI{
+			Image: os.Getenv("CustomCI_IMAGE"),
 			Params: os.Getenv("CustomCI_PARAMS")
 		}
+	} else{
+	    return &InnerCI{
+        			Owner: os.Getenv("GITEE_OWNER"),
+                    Repo: os.Getenv("GITEE_REPO"),
+                    Branch: os.Getenv("BRANCH"),
+                    AccessToken: os.Getenv("GITEE_ACCESS_TOKEN"),
+                    WorkDir: os.Getenv("GITEE_OWNER")
+        		}
 	}
+
 }
 ///
 ///

@@ -47,16 +47,196 @@ type WebUIReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
 func (r *WebUIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 
-	// your logic here
+    _log := log.FromContext(ctx)
 
-	return ctrl.Result{}, nil
+    instance := websitev1alpha1.WebUI{}
+
+    if err := r.Client.Get(ctx, req.NamespacedName, &instance); err != nil {
+        //_log.Error(err, "failed to get RepoScanner resource")
+        // Ignore NotFound errors as they will be retried automatically if the
+        // resource is created in future.
+        return ctrl.Result{}, client.IgnoreNotFound(err)
+    }
+
+    deployment := apps.Deployment{}
+    err := r.Client.Get(ctx, client.ObjectKey{Namespace: instance.Namespace, Name: instance.Name + "-worker"}, &deployment)
+    if apierrors.IsNotFound(err) {
+        _log.Info("could not find existing Deployment for MyKind, creating one...")
+
+        deployment = buildDeployment(instance)
+        if err := r.Client.Create(ctx, &deployment); err != nil {
+
+            _log.Error(err, "failed to create Deployment resource")
+            return ctrl.Result{}, err
+        }
+
+        //r.Recorder.Eventf(&instance, v1.EventTypeNormal, "Created", "Created deployment %q", deployment.Name)
+        _log.Info("created Deployment resource for WebUI")
+        return ctrl.Result{}, nil
+    }
+
+    service := apps.Service{}
+    err := r.Client.Get(ctx, client.ObjectKey{Namespace: instance.Namespace, Name: instance.Name + "-service"}, &service)
+    if apierrors.IsNotFound(err) {
+        _log.Info("could not find existing Service for webui, creating one...")
+
+        deployment = buildService(instance)
+        if err := r.Client.Create(ctx, &service); err != nil {
+
+            _log.Error(err, "failed to create service resource")
+            return ctrl.Result{}, err
+        }
+
+        //r.Recorder.Eventf(&instance, v1.EventTypeNormal, "Created", "Created deployment %q", deployment.Name)
+        _log.Info("created service resource for WebUI")
+        return ctrl.Result{}, nil
+    }
+
+
+    ingress := apps.Ingress{}
+    err := r.Client.Get(ctx, client.ObjectKey{Namespace: instance.Namespace, Name: instance.Name + "-Ingress"}, &ingress)
+    if apierrors.IsNotFound(err) {
+        _log.Info("could not find existing Service for webui, creating one...")
+
+        deployment = buildIngress(instance)
+        if err := r.Client.Create(ctx, &ingress); err != nil {
+
+            _log.Error(err, "failed to create ingress resource")
+            return ctrl.Result{}, err
+        }
+
+        //r.Recorder.Eventf(&instance, v1.EventTypeNormal, "Created", "Created deployment %q", deployment.Name)
+        _log.Info("created ingress resource for WebUI")
+        return ctrl.Result{}, nil
+    }
+
+    if err != nil {
+        _log.Error(err, "failed to get Deployment for MyKind resource")
+        return ctrl.Result{}, err
+    }
+
+    _log.Info("existing Deployment resource already exists for MyKind, checking replica count")
+
+    expectedReplicas := int32(1)
+
+    if *deployment.Spec.Replicas != expectedReplicas {
+        _log.Info("updating replica count", "old_count", *deployment.Spec.Replicas, "new_count", expectedReplicas)
+
+        deployment.Spec.Replicas = &expectedReplicas
+        if err := r.Client.Update(ctx, &deployment); err != nil {
+            _log.Error(err, "failed to Deployment update replica count")
+            return ctrl.Result{}, err
+        }
+
+        //r.Recorder.Eventf(&instance, v1.EventTypeNormal, "Scaled", "Scaled deployment %q to %d replicas", deployment.Name, expectedReplicas)
+
+        return ctrl.Result{}, nil
+    }
+
+    log.Log.Info("replica count up to date", "replica_count", *deployment.Spec.Replicas)
+
+    return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *WebUIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&websitev1alpha1.WebUI{}).
-		Complete(r)
+    		For(&websitev1alpha1.WebUI{}).
+    		Owns(&apps.Deployment{}).
+    		Owns(&apps.Service{}).
+    		Owns(&apps.Ingress{}).
+    		Complete(r)
 }
+
+func buildDeployment(websitev1alpha1 websitev1alpha1.WebUI) apps.Deployment {
+
+	var replicas int32 = 1
+
+	deployment := apps.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            repoScanner.Name + "-worker",
+			Namespace:       repoScanner.Namespace,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(&repoScanner, websitev1alpha1.GroupVersion.WithKind("WebUI"))},
+		},
+		Spec: apps.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"openeuler.org/website-operator-RepoScanner-Worker": repoScanner.Name + "-worker",
+				},
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"openeuler.org/website-operator-RepoScanner-Worker": repoScanner.Name + "-worker",
+					},
+				},
+				Spec: repoScanner.Spec.PodSpec,
+			},
+		},
+	}
+	return deployment
+}
+
+
+func buildService(websitev1alpha1 websitev1alpha1.WebUI) apps.Service {
+
+	var replicas int32 = 1
+
+	deployment := apps.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            repoScanner.Name + "-worker",
+			Namespace:       repoScanner.Namespace,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(&repoScanner, websitev1alpha1.GroupVersion.WithKind("WebUI"))},
+		},
+		Spec: apps.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"openeuler.org/website-operator-RepoScanner-Service": repoScanner.Name + "-Service",
+				},
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"openeuler.org/website-operator-RepoScanner-Service": repoScanner.Name + "-Service",
+					},
+				},
+				Spec: repoScanner.Spec.PodSpec,
+			},
+		},
+	}
+	return deployment
+}
+
+func buildIngress(websitev1alpha1 websitev1alpha1.WebUI) apps.Ingress {
+
+	var replicas int32 = 1
+
+	deployment := apps.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            repoScanner.Name + "-worker",
+			Namespace:       repoScanner.Namespace,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(&repoScanner, websitev1alpha1.GroupVersion.WithKind("WebUI"))},
+		},
+		Spec: apps.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"openeuler.org/website-operator-RepoScanner-Ingress": repoScanner.Name + "-Ingress",
+				},
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"openeuler.org/website-operator-RepoScanner-Ingress": repoScanner.Name + "-Ingress",
+					},
+				},
+				Spec: repoScanner.Spec.PodSpec,
+			},
+		},
+	}
+	return deployment
+}
+
